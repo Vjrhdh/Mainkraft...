@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>Minecraft 3D Pro</title>
+<style>
+body{margin:0;background:#0b0e14;overflow:hidden;font-family:monospace;display:flex;flex-direction:column;justify-content:center;align-items:center;height:100vh;color:#fff;user-select:none;}
+#authBlock{position:absolute;width:100%;height:100%;background:#10151f;z-index:200;display:flex;flex-direction:column;justify-content:center;align-items:center;}
+.auth-input{background:#1a2233;border:2px solid #00ffcc;padding:12px;color:#fff;font-size:16px;border-radius:6px;margin:8px;width:220px;font-family:monospace;}
+#gameUI{display:none;width:100%;height:100vh;position:relative;flex-direction:column;justify-content:space-between;align-items:center;box-sizing:border-box;padding:5px;}
+canvas{background:#70b5ff;border:3px solid #00ffcc;box-shadow:0 0 15px rgba(0,255,200,0.3);display:block;}
+.hud-top{width:100%;max-width:360px;display:flex;justify-content:space-between;font-size:11px;font-weight:bold;color:#00ffcc;text-shadow:1px 1px #000;padding:2px;}
+.control-panel{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;width:130px;}
+.action-panel{display:grid;grid-template-columns:repeat(2,1fr);gap:4px;width:200px;}
+.btn{background:#1a2233;color:#00ffcc;border:2px solid #00ffcc;padding:8px;font-weight:bold;font-size:12px;text-align:center;border-radius:6px;cursor:pointer;text-shadow:1px 1px #000;}
+.btn:active{background:#00ffcc;color:#10151f;}
+.btn.active{background:#ff0055;color:#fff;border-color:#ff0055;}
+#invBar{width:100%;max-width:360px;background:rgba(26,34,51,0.9);border:2px solid #00ffcc;border-radius:6px;padding:4px;display:grid;grid-template-columns:repeat(4,1fr);gap:2px;font-size:9px;text-align:center;}
+.modal{display:none;position:absolute;top:8%;width:85%;max-width:320px;background:#1c2433;border:3px solid #00ffcc;border-radius:8px;padding:12px;z-index:150;box-shadow:0 0 25px #000;}
+.modal-title{color:#ff0055;font-size:15px;font-weight:bold;margin-bottom:10px;text-align:center;border-bottom:2px dashed #00ffcc;padding-bottom:4px;}
+.craft-row{display:flex;justify-content:space-between;align-items:center;margin:6px 0;font-size:11px;}
+#achievementsUI{display:none;position:absolute;top:15%;width:80%;background:#111622;border:2px solid #ffcc00;padding:10px;z-index:160;text-align:center;border-radius:6px;}
+</style>
+</head>
+<body>
+<div id="authBlock">
+<h2 style="color:#00ffcc;text-shadow:0 0 10px #00ffcc;margin-bottom:20px;">AVTORIZACIYA</h2>
+<input type="text" id="username" class="auth-input" placeholder="Imya">
+<input type="password" id="password" class="auth-input" placeholder="Parol">
+<button class="btn" style="width:244px;margin-top:10px;font-size:16px;" onclick="tryLogin()">VOYTI</button>
+</div>
+
