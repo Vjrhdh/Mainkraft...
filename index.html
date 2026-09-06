@@ -25,9 +25,257 @@ canvas{background:#70b5ff;border:3px solid #00ffcc;box-shadow:0 0 15px rgba(0,25
 </head>
 <body>
 <div id="authBlock">
-<h2 style="color:#00ffcc;text-shadow:0 0 10px #00ffcc;margin-bottom:20px;">AVTORIZACIYA</h2>
-<input type="text" id="username" class="auth-input" placeholder="Imya">
+<h2 style="color:#00ffcc;text-shadow:0 0 10px #00ffcc;margin-bottom:15px;font-size:20px;">MINECRAFT INTERNET</h2>
+<p id="authStatus" style="color:#aaa;font-size:11px;margin:0 0 10px 0;">Sozdajte noviy profil ili voydite v staryj</p>
+<input type="text" id="username" class="auth-input" placeholder="Login / Nik">
 <input type="password" id="password" class="auth-input" placeholder="Parol">
-<button class="btn" style="width:244px;margin-top:10px;font-size:16px;" onclick="tryLogin()">VOYTI</button>
+<div style="display:flex;gap:10px;margin-top:10px;">
+<button class="btn" style="width:115px;background:#00ffcc;color:#10151f;" onclick="processAuth('login')">VOYTI</button>
+<button class="btn" style="width:115px;background:#ff0055;color:#fff;border-color:#ff0055;" onclick="processAuth('register')">REGISTR.</button>
 </div>
-
+</div>
+<div id="gameUI">
+<div class="hud-top">
+<div>HP:<span id="hp">100</span> | Br:<span id="armor">0</span></div>
+<div>User:<span id="userDisplay" style="color:#fff;">Name</span> | <span id="timeState">Den</span></div>
+</div>
+<canvas id="mcCanvas" width="350" height="320"></canvas>
+<div id="craftModal" class="modal">
+<div class="modal-title">VERSTAK</div>
+<div class="craft-row"><span>Kamen Kirka</span><button class="btn" onclick="craftItem('stone_pick')">Sdelat</button></div>
+<div class="craft-row"><span>Zhelez Mech</span><button class="btn" onclick="craftItem('sword')">Sdelat</button></div>
+<div class="craft-row"><span>Zhelez Kirka</span><button class="btn" onclick="craftItem('iron_pick')">Sdelat</button></div>
+<div class="craft-row"><span>Zhelez Lopata</span><button class="btn" onclick="craftItem('iron_shovel')">Sdelat</button></div>
+<div class="craft-row"><span>Zhelez Bronya</span><button class="btn" onclick="craftItem('iron_armor')">Sdelat</button></div>
+<div class="craft-row"><span>Almaz Bronya</span><button class="btn" onclick="craftItem('dia_armor')">Sdelat</button></div>
+<button class="btn" style="width:100%;margin-top:10px;background:#ff0055;color:#fff;" onclick="closeModals()">ZAKRIT</button>
+</div>
+<div id="furnaceModal" class="modal">
+<div class="modal-title">PECH</div>
+<div class="craft-row"><span>Plavit Zhelezo</span><button class="btn" onclick="smeltIron()">Splavit</button></div>
+<button class="btn" style="width:100%;margin-top:10px;background:#ff0055;color:#fff;" onclick="closeModals()">ZAKRIT</button>
+</div>
+<div id="tradeModal" class="modal">
+<div class="modal-title">ZHITEL</div>
+<div class="craft-row"><span>5 Kamen to 1 Izumrud</span><button class="btn" onclick="tradeItem('sell_stone')">Obmen</button></div>
+<div class="craft-row"><span>1 Almaz to 2 Izumruda</span><button class="btn" onclick="tradeItem('buy_dia')">Obmen</button></div>
+<button class="btn" style="width:100%;margin-top:10px;background:#ff0055;color:#fff;" onclick="closeModals()">ZAKRIT</button>
+</div>
+<div id="achievementsUI">
+<h3 style="color:#ffcc00;margin:4px;">DOSTIZHENIE!</h3>
+<p id="achText" style="font-size:12px;margin:4px;"></p>
+<button class="btn" onclick="document.getElementById('achievementsUI').style.display='none'">OK</button>
+</div>
+<div style="width:100%;max-width:360px;display:flex;justify-content:space-between;align-items:center;padding:2px 0;">
+<div class="control-panel">
+<div></div><button class="btn" onclick="movePlayer(0,-8)">Up</button><div></div>
+<button class="btn" onclick="movePlayer(-8,0)">Left</button>
+<button class="btn" onclick="playerJump()">Jump</button>
+<button class="btn" onclick="movePlayer(8,0)">Right</button>
+<div></div><button class="btn" onclick="movePlayer(0,8)">Down</button><div></div>
+</div>
+<div class="action-panel">
+<button id="modeL" class="btn active" onclick="setMode('break')">LOMAT</button>
+<button id="modeS" class="btn" onclick="setMode('build')">STAVIT</button>
+<button class="btn" style="background:#55c443;" onclick="openBlockMenu()">Vybor</button>
+<button class="btn" style="background:#ff9900;" onclick="attackMob()">ATAK</button>
+</div>
+</div>
+<div id="invBar">
+<div>Trava:<span id="inv-dirt">0</span></div>
+<div>Kamen:<span id="inv-stone">0</span></div>
+<div>Derevo:<span id="inv-wood">0</span></div>
+<div>Ruda:<span id="inv-iron-ore">0</span></div>
+<div>Slitok:<span id="inv-iron-ingot">0</span></div>
+<div>Almaz:<span id="inv-diamond">0</span></div>
+<div>Izumrud:<span id="inv-emerald">0</span></div>
+<div>Ataka:<span id="inv-dmg">5</span></div>
+</div>
+</div>
+<script>
+const canvas=document.getElementById("mcCanvas");
+const ctx=canvas.getContext("2d");
+let currentUser="";
+let p={x:160,y:120,w:22,h:38,hp:100,armor:0,dmg:5};
+let inv={dirt:0,stone:0,wood:0,ironOre:0,ironIngot:0,diamond:0,emerald:0};
+let tools={stone_pick:false,iron_pick:false,iron_shovel:false};
+let achievements={first_dirt:false,diamond_hunter:false,iron_armor:false};
+let mode="break";let buildType="dirt";let isNight=false,timeTicks=0;
+let blocks=[],mobs=[];
+function processAuth(type){
+let user=document.getElementById("username").value.trim();
+let pass=document.getElementById("password").value.trim();
+if(user===""||pass===""){alert("Zapolnite nik i parol!");return;}
+currentUser=user;
+document.getElementById("userDisplay").innerText=user;
+let savedData=localStorage.getItem("mc_save_"+user);
+ if(type==='register'){
+if(savedData){alert("Etot nik uzhe zanyat!");return;}
+inv={dirt:5,stone:5,wood:5,ironOre:2,ironIngot:0,diamond:0,emerald:2};
+tools={stone_pick:false,iron_pick:false,iron_shovel:false};
+achievements={first_dirt:false,diamond_hunter:false,iron_armor:false};
+saveProfileData();alert("Akkaunt uspeshno sozdan!");
+}else if(type==='login'){
+if(!savedData){alert("Akkaunt ne nayden! Nazhmite REGISTR.");return;}
+let parsed=JSON.parse(savedData);
+p.armor=parsed.armor||0;p.dmg=parsed.dmg||5;
+inv=parsed.inv||{dirt:0,stone:0,wood:0,ironOre:0,ironIngot:0,diamond:0,emerald:0};
+tools=parsed.tools||{stone_pick:false,iron_pick:false,iron_shovel:false};
+achievements=parsed.achievements||{first_dirt:false,diamond_hunter:false,iron_armor:false};
+alert("Uspeshnyy vhod! Mir zagruzhen.");
+}
+document.getElementById("authBlock").style.display="none";
+document.getElementById("gameUI").style.display="flex";
+initWorld();updateUI();loop();
+}
+function saveProfileData(){
+if(!currentUser)return;
+let dataToSave={armor:p.armor,dmg:p.dmg,inv:inv,tools:tools,achievements:achievements};
+localStorage.setItem("mc_save_"+currentUser,JSON.stringify(dataToSave));
+}
+function triggerAchievement(id,text){
+if(achievements[id])return;
+achievements[id]=true;saveProfileData();
+document.getElementById("achText").innerText=text;
+document.getElementById("achievementsUI").style.display="block";
+}
+function initWorld(){
+blocks=[];
+for(let x=10;x<340;x+=32){
+for(let y=160;y<300;y+=26){
+let type="stone";let hp=5;
+if(y===160){type="dirt";hp=3;}
+else if(y>220){
+let r=Math.random();
+if(r<0.08){type="diamond";hp=15;}
+else if(r<0.18){type="iron_ore";hp=8;}
+else{type="stone";hp=5;}
+}else{
+let r=Math.random();
+if(r<0.25){type="wood";hp=4;}
+else{type="stone";hp=5;}
+}
+blocks.push({x:x,y:y,w:30,h:24,type:type,hp:hp,maxHp:hp});
+}
+}
+mobs.push({x:80,y:125,type:"villager",color:"#d2b48c",hp:20});
+}
+function setMode(m){mode=m;document.getElementById("modeL").classList.toggle("active",m==="break");document.getElementById("modeS").classList.toggle("active",m==="build");}
+function openBlockMenu(){
+let res=prompt("1-Trava,2-Kamen,3-Derevo,4-Verstak,5-Pech");
+if(res==="1")buildType="dirt";if(res==="2")buildType="stone";if(res==="3")buildType="wood";if(res==="4")buildType="craft_table";if(res==="5")buildType="furnace";
+}
+function movePlayer(dx,dy){p.x=Math.max(10,Math.min(320,p.x+dx));p.y=Math.max(20,Math.min(270,p.y+dy));}
+function playerJump(){p.y-=30;setTimeout(()=>{p.y+=30;},250);}
+function closeModals(){document.getElementById("craftModal").style.display="none";document.getElementById("furnaceModal").style.display="none";document.getElementById("tradeModal").style.display="none";}
+canvas.addEventListener("touchstart",(e)=>{
+const rect=canvas.getBoundingClientRect();const clickX=e.touches.clientX-rect.left;const clickY=e.touches.clientY-rect.top;
+for(let b of blocks){
+if(clickX>=b.x&&clickX<=b.x+b.w&&clickY>=b.y&&clickY<=b.y+b.h){
+if(mode==="break"){
+let dmgDone=1;
+if(b.type==="dirt"&&tools.iron_shovel){dmgDone=3;}
+else if(b.type==="stone"&&tools.iron_pick){dmgDone=3;}
+else if(b.type==="stone"&&tools.stone_pick){dmgDone=2;}
+else if(b.type==="iron_ore"&&tools.iron_pick){dmgDone=2;}
+else if(b.type==="diamond"&&tools.iron_pick){dmgDone=2;}
+b.hp-=dmgDone;
+if(b.hp<=0){
+inv[b.type]++;blocks.splice(blocks.indexOf(b),1);saveProfileData();
+if(b.type==="dirt")triggerAchievement("first_dirt","Blok gryazi dobyt!");
+if(b.type==="diamond")triggerAchievement("diamond_hunter","Almaz dobyt!");
+}
+updateUI();return;
+}else{
+if(b.type==="craft_table"){document.getElementById("craftModal").style.display="block";return;}
+if(b.type==="furnace"){document.getElementById("furnaceModal").style.display="block";return;}
+}
+}
+}
+for(let m of mobs){if(m.type==="villager"&&Math.abs(clickX-m.x)<30&&Math.abs(clickY-m.y)<40){document.getElementById("tradeModal").style.display="block";return;}}
+if(mode==="build"){
+if(buildType==="craft_table"||buildType==="furnace"||inv[buildType]>0){
+if(buildType!=="craft_table"&&buildType!=="furnace")inv[buildType]--;
+blocks.push({x:Math.floor(clickX/32)*32+2,y:Math.floor(clickY/26)*26,w:30,h:24,type:buildType,hp:5,maxHp:5});
+saveProfileData();updateUI();
+}
+}
+});
+function craftItem(item){
+if(item==='stone_pick'&&inv.stone>=3&&inv.wood>=2){inv.stone-=3;inv.wood-=2;tools.stone_pick=true;alert("Kirka sdelana!");}
+else if(item==='sword'&&inv.ironIngot>=2&&inv.wood>=1){inv.ironIngot-=2;inv.wood-=1;p.dmg=15;alert("Mech sdelan!");}
+else if(item==='iron_pick'&&inv.ironIngot>=3&&inv.wood>=2){inv.ironIngot-=3;inv.wood-=2;tools.iron_pick=true;alert("Kirka sdelana!");}
+else if(item==='iron_shovel'&&inv.ironIngot>=1&&inv.wood>=2){inv.ironIngot-=1;inv.wood-=2;tools.iron_shovel=true;alert("Lopata sdelana!");}
+else if(item==='iron_armor'&&inv.ironIngot>=5){inv.ironIngot-=5;p.armor=30;triggerAchievement("iron_armor","Bronya nadeta!");}
+else if(item==='dia_armor'&&inv.diamond>=5){inv.diamond-=5;p.armor=60;alert("Bronya nadeta!");}
+else{return;}
+saveProfileData();updateUI();closeModals();
+}
+function smeltIron(){if(inv.ironOre>=1&&inv.wood>=1){inv.ironOre-=1;inv.wood-=1;inv.ironIngot+=1;alert("Slitok gotov!");}saveProfileData();updateUI();closeModals();}
+function tradeItem(type){
+if(type==='sell_stone'&&inv.stone>=5){inv.stone-=5;inv.emerald+=1;}
+else if(type==='buy_dia'&&inv.emerald>=2){inv.emerald-=2;inv.diamond+=1;}
+else{return;}
+saveProfileData();updateUI();closeModals();
+}
+function attackMob(){for(let i=mobs.length-1;i>=0;i--){let m=mobs[i];if(m.type==="zombie"&&Math.abs(m.x-p.x)<45){m.hp-=p.dmg;if(m.hp<=0)mobs.splice(i,1);return;}}}
+function updateUI(){
+document.getElementById("inv-dirt").innerText=inv.dirt;document.getElementById("inv-stone").innerText=inv.stone;document.getElementById("inv-wood").innerText=inv.wood;document.getElementById("inv-iron-ore").innerText=inv.ironOre;document.getElementById("inv-iron-ingot").innerText=inv.ironIngot;document.getElementById("inv-diamond").innerText=inv.diamond;document.getElementById("inv-emerald").innerText=inv.emerald;document.getElementById("inv-dmg").innerText=p.dmg;document.getElementById("hp").innerText=Math.floor(p.hp);document.getElementById("armor").innerText=p.armor;
+}
+function update(){
+timeTicks++;if(timeTicks%500===0){isNight=!isNight;document.getElementById("timeState").innerText=isNight?"Noch bag":"Den";if(!isNight)mobs=mobs.filter(m=>m.type==="villager");}
+if(isNight&&Math.random()<0.02&&mobs.filter(m=>m.type==="zombie").length<2){mobs.push({x:Math.random()<0.5?10:330,y:125,type:"zombie",color:"#2e7d32",hp:30});}
+for(let m of mobs){
+if(m.type==="zombie"){
+if(m.x<p.x)m.x+=1;else m.x-=1;
+if(Math.abs(m.x-p.x)<15){
+p.hp-=0.5*(1-p.armor/100);updateUI();
+if(p.hp<=0){
+inv={dirt:0,stone:0,wood:0,ironOre:0,ironIngot:0,diamond:0,emerald:0};
+tools={stone_pick:false,iron_pick:false,iron_shovel:false};
+p.hp=100;p.armor=0;p.dmg=5;p.x=160;p.y=120;isNight=false;timeTicks=0;closeModals();mobs=mobs.filter(m=>m.type==="villager");saveProfileData();updateUI();
+}
+}
+}
+}
+}
+function draw(){
+ctx.clearRect(0,0,canvas.width,canvas.height);canvas.style.background=isNight?"#0d101d":"#70b5ff";
+for(let b of blocks){
+if(b.type==="dirt"){
+ctx.fillStyle="#8b5a2b";ctx.fillRect(b.x,b.y+6,b.w,b.h-6);
+ctx.fillStyle="#55c443";ctx.fillRect(b.x,b.y,b.w,6);
+ctx.strokeStyle="#41a630";ctx.strokeRect(b.x,b.y,b.w,6);
+}else if(b.type==="stone"){
+ctx.fillStyle="#737373";ctx.fillRect(b.x,b.y,b.w,b.h);
+ctx.strokeStyle="#595959";ctx.strokeRect(b.x,b.y,b.w,b.h);
+}else if(b.type==="wood"){
+ctx.fillStyle="#a0522d";ctx.fillRect(b.x,b.y,b.w,b.h);
+ctx.strokeStyle="#8b4513";ctx.strokeRect(b.x,b.y,b.w,b.h);
+}else if(b.type==="iron_ore"){
+ctx.fillStyle="#737373";ctx.fillRect(b.x,b.y,b.w,b.h);
+ctx.fillStyle="#d4b28c";ctx.fillRect(b.x+8,b.y+6,8,8);
+ctx.strokeStyle="#595959";ctx.strokeRect(b.x,b.y,b.w,b.h);
+}else if(b.type==="diamond"){
+ctx.fillStyle="#595959";ctx.fillRect(b.x,b.y,b.w,b.h);
+ctx.fillStyle="#00ffff";ctx.fillRect(b.x+10,b.y+6,8,8);
+ctx.strokeStyle="#404040";ctx.strokeRect(b.x,b.y,b.w,b.h);
+}else if(b.type==="craft_table"){
+ctx.fillStyle="#cd853f";ctx.fillRect(b.x,b.y,b.w,b.h);
+ctx.strokeStyle="#8b4513";ctx.strokeRect(b.x,b.y,b.w,b.h);
+ctx.fillStyle="#000";ctx.font="8px Arial";ctx.fillText("CT",b.x+4,b.y+12);
+}else if(b.type==="furnace"){
+ctx.fillStyle="#404040";ctx.fillRect(b.x,b.y,b.w,b.h);
+ctx.fillStyle="#ff6600";ctx.fillRect(b.x+8,b.y+12,14,6);
+ctx.strokeStyle="#262626";ctx.strokeRect(b.x,b.y,b.w,b.h);
+}
+if(b.hp<b.maxHp){ctx.fillStyle="red";ctx.fillRect(b.x,b.y-4,b.w,3);ctx.fillStyle="green";ctx.fillRect(b.x,b.y-4,b.w*(b.hp/b.maxHp),3);}
+}
+for(let m of mobs){ctx.fillStyle=m.color;ctx.fillRect(m.x,m.y,20,35);if(m.type==="zombie"){ctx.fillStyle="#ff0055";ctx.fillRect(m.x+3,m.y+5,3,3);ctx.fillRect(m.x+12,m.y+5,3,3);}}
+ctx.fillStyle=p.armor>0?(p.armor===60?"#00ffff":"#d4d4d4"):"#00b3b3";ctx.fillRect(p.x,p.y,p.w,p.h);
+ctx.fillStyle="#ffdb99";ctx.fillRect(p.x+3,p.y-10,16,10);
+}
+function loop(){update();draw();requestAnimationFrame(loop);}
+</script>
+</body>
+</html>
